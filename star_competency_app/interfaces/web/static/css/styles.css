@@ -71,3 +71,35 @@ body {
     margin: 0.25rem;
     display: inline-block;
 }
+
+.btn .bi {
+    display: inline-block;
+    vertical-align: -0.125em;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.25rem;
+  }
+  
+  /* Ensure icons are properly sized and aligned */
+  .bi::before {
+    display: inline-block;
+    content: "";
+    vertical-align: -.125em;
+    background-repeat: no-repeat;
+    background-size: 1rem 1rem;
+  }
+  
+  /* Fix specific buttons with icons */
+  .btn-primary .bi-plus-circle::before,
+  .btn-outline-primary .bi-plus-circle::before {
+    content: "\f4fa";  /* Bootstrap Icons code for plus-circle */
+  }
+  
+  /* Additional fixes for other icon placements */
+  .nav-link .bi, 
+  .dropdown-item .bi {
+    vertical-align: -0.125em;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.25rem;
+  }

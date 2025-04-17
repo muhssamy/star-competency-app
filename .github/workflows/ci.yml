@@ -2,15 +2,17 @@ name: CI / Compose Build & Publish
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
     tags:
       - "v*.*.*"
   pull_request:
-    branches: [master]
+    branches: [master, main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/${{ github.repository }}
+  COMPOSE_FILE: ./docker/docker-compose.yml
 
 jobs:
   lint-test:
@@ -63,7 +65,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Ensure Docker Compose available
+      - name: Ensure Docker Compose is available
         run: |
           if ! command -v docker-compose &> /dev/null; then
             sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" \
@@ -75,22 +77,23 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build services using Compose
+      - name: Build services using Compose with cache
         run: |
-          docker-compose -f ./docker/docker-compose.yml build
+          docker-compose -f ${{ env.COMPOSE_FILE }} build --build-arg BUILDKIT_INLINE_CACHE=1
 
-      - name: Tag and push versioned image and :latest
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      - name: Tag and Push Docker Images
         run: |
-          VERSION_TAG=${GITHUB_REF#refs/tags/}
-          IMAGE_NAME=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.repository }}
-          # Tag with version (e.g., ghcr.io/your-user/repo-name:v1.0.0)
-          docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${VERSION_TAG}
-          # Tag with :latest (e.g., ghcr.io/your-user/repo-name:latest)
-          docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:latest
-          # Push both tags
-          docker-compose -f ./docker/docker-compose.yml push
+          VERSION_TAG="latest"
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION_TAG="${GITHUB_REF#refs/tags/}"
+          fi
+
+          echo "📦 Tagging and pushing image with tag: ${VERSION_TAG}"
+
+          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${VERSION_TAG}
+          docker push ${{ env.IMAGE_NAME }}:${VERSION_TAG}
+          docker push ${{ env.IMAGE_NAME }}:latest

@@ -45,29 +45,25 @@ def login():
 @auth_bp.route("/callback")
 def callback():
     """Handle Azure SSO callback."""
+    # Process the login and get a properly detached user object
     success, user_info, error = azure_sso.process_login(request.args)
 
     if not success:
         flash(f"Login failed: {error}", "error")
         return redirect(url_for("auth.login"))
 
-    # Get user and active session from db_manager
-    user, db_session = db_manager.get_user_by_azure_id(user_info["id"])
+    # Get user ID from session data populated by process_login
+    user_id = session["user"]["id"]
+
+    # Get a fresh user object with proper detaching
+    user = db_manager.get_user_by_id(user_id)
 
     if not user:
-        db_session.close()
         flash("User account not found", "error")
         return redirect(url_for("auth.login"))
 
-    # User is already attached to db_session, but double-check
-    if object_session(user) is None:
-        user = db_session.merge(user)
-
-    # Log in the user
+    # Login user with the detached but initialized user object
     login_user(user)
-
-    # Clean up session
-    db_session.close()
 
     # Redirect user
     next_page = session.get("next", None)
@@ -81,16 +77,19 @@ def callback():
 @login_required
 def profile():
     """Display and manage user profile."""
+    # Get user ID safely without triggering a database access
+    user_id = int(current_user.get_id())
+
     # Get user's activity stats
-    star_stories_count = db_manager.count_star_stories_by_user(current_user.id)
-    case_studies_count = db_manager.count_case_studies_by_user(current_user.id)
+    star_stories_count = db_manager.count_star_stories_by_user(user_id)
+    case_studies_count = db_manager.count_case_studies_by_user(user_id)
 
     # Get user's recent activity
-    recent_activity = db_manager.get_recent_audit_logs(current_user.id, limit=10)
+    recent_activity = db_manager.get_recent_audit_logs(user_id, limit=10)
 
     # Get user's competency coverage
     competencies = db_manager.get_competencies()
-    coverage_stats = compute_competency_coverage(current_user.id, competencies)
+    coverage_stats = compute_competency_coverage(user_id, competencies)
 
     return render_template(
         "auth/profile.html",

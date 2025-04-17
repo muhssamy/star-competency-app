@@ -1,150 +1,210 @@
 <!-- star_competency_app/interfaces/web/templates/dashboard.html -->
-{% extends "base.html" %}
-
-{% block title %}Dashboard - STAR Competency App{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Dashboard - STAR Competency App{%
+endblock %} {% block content %}
 <div class="row mb-4">
-    <div class="col">
-        <h1>Dashboard</h1>
-        <p class="lead">Welcome, {{ current_user.display_name }}!</p>
-    </div>
-    <div class="col-auto">
-        <a href="{{ url_for('star.new_star_story') }}" class="btn btn-primary me-2">
-            <i class="bi bi-plus-circle"></i> New STAR Story
-        </a>
-        <a href="{{ url_for('case_study.new_case_study') }}" class="btn btn-outline-primary">
-            <i class="bi bi-plus-circle"></i> New Case Study
-        </a>
-    </div>
+  <div class="col">
+    <h1>Dashboard</h1>
+    <p class="lead">Welcome, {{ current_user.display_name }}!</p>
+  </div>
+  <div class="col-auto">
+    <a href="{{ url_for('star.new_star_story') }}" class="btn btn-primary me-2">
+      <i class="bi bi-plus-circle" aria-hidden="true"></i> New STAR Story
+    </a>
+    <a
+      href="{{ url_for('case_study.new_case_study') }}"
+      class="btn btn-outline-primary"
+    >
+      <i class="bi bi-plus-circle" aria-hidden="true"></i> New Case Study
+    </a>
+  </div>
 </div>
 
 <div class="row">
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent STAR Stories</h5>
-                <a href="{{ url_for('star.list_star_stories') }}" class="btn btn-sm btn-outline-primary">View All</a>
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">Recent STAR Stories</h5>
+        <a
+          href="{{ url_for('star.list_star_stories') }}"
+          class="btn btn-sm btn-outline-primary"
+          >View All</a
+        >
+      </div>
+      <div class="card-body">
+        {% if star_stories %}
+        <div class="list-group">
+          {% for story in star_stories[:5] %}
+          <a
+            href="{{ url_for('star.view_star_story', story_id=story.id) }}"
+            class="list-group-item list-group-item-action"
+          >
+            <div class="d-flex w-100 justify-content-between">
+              <h5 class="mb-1">{{ story.title }}</h5>
+              <small>{{ story.updated_at.strftime('%Y-%m-%d') }}</small>
             </div>
-            <div class="card-body">
-                {% if star_stories %}
-                <div class="list-group">
-                    {% for story in star_stories[:5] %}
-                    <a href="{{ url_for('star.view_star_story', story_id=story.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ story.title }}</h5>
-                            <small>{{ story.updated_at.strftime('%Y-%m-%d') }}</small>
-                        </div>
-                        <p class="mb-1">
-                            {% if story.competency %}
-                            <span class="badge bg-primary">{{ story.competency.name }}</span>
-                            {% endif %}
-                        </p>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-center py-3">No STAR stories yet. <a href="{{ url_for('star.new_star_story') }}">Create your first one</a>.</p>
-                {% endif %}
-            </div>
+            <p class="mb-1">
+              {% if story.competency %}
+              <span class="badge bg-primary">{{ story.competency.name }}</span>
+              {% endif %}
+            </p>
+          </a>
+          {% endfor %}
         </div>
+        {% else %}
+        <p class="text-center py-3">
+          No STAR stories yet.
+          <a href="{{ url_for('star.new_star_story') }}"
+            >Create your first one</a
+          >.
+        </p>
+        {% endif %}
+      </div>
     </div>
-    
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Case Studies</h5>
-                <a href="{{ url_for('case_study.list_case_studies') }}" class="btn btn-sm btn-outline-primary">View All</a>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">Recent Case Studies</h5>
+        <a
+          href="{{ url_for('case_study.list_case_studies') }}"
+          class="btn btn-sm btn-outline-primary"
+          >View All</a
+        >
+      </div>
+      <div class="card-body">
+        {% if case_studies %}
+        <div class="list-group">
+          {% for case in case_studies[:5] %}
+          <a
+            href="{{ url_for('case_study.view_case_study', case_id=case.id) }}"
+            class="list-group-item list-group-item-action"
+          >
+            <div class="d-flex w-100 justify-content-between">
+              <h5 class="mb-1">{{ case.title }}</h5>
+              <small>{{ case.updated_at.strftime('%Y-%m-%d') }}</small>
             </div>
-            <div class="card-body">
-                {% if case_studies %}
-                <div class="list-group">
-                    {% for case in case_studies[:5] %}
-                    <a href="{{ url_for('case_study.view_case_study', case_id=case.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">{{ case.title }}</h5>
-                            <small>{{ case.updated_at.strftime('%Y-%m-%d') }}</small>
-                        </div>
-                        <p class="mb-1">
-                            {% if case.claude_analysis %}
-                            <span class="badge bg-success">Analyzed</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Not Analyzed</span>
-                            {% endif %}
-                        </p>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-center py-3">No case studies yet. <a href="{{ url_for('case_study.new_case_study') }}">Upload your first one</a>.</p>
-                {% endif %}
-            </div>
+            <p class="mb-1">
+              {% if case.claude_analysis %}
+              <span class="badge bg-success">Analyzed</span>
+              {% else %}
+              <span class="badge bg-secondary">Not Analyzed</span>
+              {% endif %}
+            </p>
+          </a>
+          {% endfor %}
         </div>
+        {% else %}
+        <p class="text-center py-3">
+          No case studies yet.
+          <a href="{{ url_for('case_study.new_case_study') }}"
+            >Upload your first one</a
+          >.
+        </p>
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Competency Framework</h5>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Competency Framework</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {% for competency in competencies %}
+          <div class="col-md-4 mb-3">
+            <div class="card competency-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">{{ competency.name }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">
+                  {{ competency.category }}
+                </h6>
+                <p class="card-text">{{ competency.description }}</p>
+                <a
+                  href="#"
+                  class="card-link"
+                  data-bs-toggle="modal"
+                  data-bs-target="#competencyModal{{ competency.id }}"
+                >
+                  View expectations
+                </a>
+              </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for competency in competencies %}
-                    <div class="col-md-4 mb-3">
-                        <div class="card competency-card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ competency.name }}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">{{ competency.category }}</h6>
-                                <p class="card-text">{{ competency.description }}</p>
-                                <a href="#" class="card-link" data-bs-toggle="modal" data-bs-target="#competencyModal{{ competency.id }}">
-                                    View expectations
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Competency Expectations Modal -->
-                    <div class="modal fade" id="competencyModal{{ competency.id }}" tabindex="-1" aria-labelledby="competencyModalLabel{{ competency.id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="competencyModalLabel{{ competency.id }}">{{ competency.name }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>{{ competency.description }}</p>
-                                    
-                                    {% if competency.expectations %}
-                                    <h6 class="mt-4">Meets Expectations:</h6>
-                                    <ul>
-                                        {% for item in competency.expectations.meets %}
-                                        <li>{{ item }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    
-                                    <h6 class="mt-4">Exceeds Expectations:</h6>
-                                    <ul>
-                                        {% for item in competency.expectations.exceeds %}
-                                        <li>{{ item }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    {% endif %}
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <a href="{{ url_for('star.new_star_story', competency_id=competency.id) }}" class="btn btn-primary">
-                                        Create STAR Story
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
+          </div>
+
+          <!-- Competency Expectations Modal -->
+          <div
+            class="modal fade"
+            id="competencyModal{{ competency.id }}"
+            tabindex="-1"
+            aria-labelledby="competencyModalLabel{{ competency.id }}"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5
+                    class="modal-title"
+                    id="competencyModalLabel{{ competency.id }}"
+                  >
+                    {{ competency.name }}
+                  </h5>
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
                 </div>
+                <div class="modal-body">
+                  <p>{{ competency.description }}</p>
+
+                  {% if competency.expectations %}
+                  <h6 class="mt-4">Meets Expectations:</h6>
+                  <ul>
+                    {% for item in competency.expectations.meets %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                  </ul>
+
+                  <h6 class="mt-4">Exceeds Expectations:</h6>
+                  <ul>
+                    {% for item in competency.expectations.exceeds %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </div>
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Close
+                  </button>
+                  <a
+                    href="{{ url_for('star.new_star_story', competency_id=competency.id) }}"
+                    class="btn btn-primary"
+                  >
+                    Create STAR Story
+                  </a>
+                </div>
+              </div>
             </div>
+          </div>
+          {% endfor %}
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

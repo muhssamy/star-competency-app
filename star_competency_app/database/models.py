@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from flask_login import UserMixin
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -15,7 +16,7 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
-class User(Base):
+class User(UserMixin, Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
@@ -37,8 +38,11 @@ class User(Base):
     def __repr__(self):
         return f"<User {self.display_name}>"
 
-    # Flask-Login integration
+    # Flask-Login integration with safe detached instance handling
     def get_id(self):
+        """Return user ID as string, safely handling detached instances."""
+        if hasattr(self, "_id"):
+            return str(self._id)
         return str(self.id)
 
     @property
@@ -48,6 +52,27 @@ class User(Base):
     @property
     def is_anonymous(self):
         return False
+
+    @property
+    def is_admin_safe(self):
+        """Safe accessor for is_admin that works with detached objects."""
+        if hasattr(self, "_is_admin"):
+            return self._is_admin
+        return getattr(self, "is_admin", False)
+
+    @property
+    def display_name_safe(self):
+        """Safe accessor for display_name that works with detached objects."""
+        if hasattr(self, "_display_name"):
+            return self._display_name
+        return getattr(self, "display_name", "")
+
+    @property
+    def email_safe(self):
+        """Safe accessor for email that works with detached objects."""
+        if hasattr(self, "_email"):
+            return self._email
+        return getattr(self, "email", "")
 
 
 class Competency(Base):

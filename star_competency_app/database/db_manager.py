@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
+from sqlalchemy.orm.session import make_transient
 
 from star_competency_app.config.settings import get_settings
 from star_competency_app.database.models import (
@@ -50,21 +51,33 @@ class DatabaseManager:
         finally:
             session.close()
 
-    # def get_user_by_azure_id(self, azure_id):
-    #     """Get a user by their Azure ID."""
-    #     with self.session_scope() as session:
-    #         return session.query(User).filter(User.azure_id == azure_id).first() #claude version
-
     def get_user_by_azure_id(self, azure_id: str):
         """Get a user by their Azure ID."""
-        session = self.session_factory()
-        user = session.query(User).filter(User.azure_id == azure_id).first()
-        return user, session
+        with self.session_scope() as session:
+            user = session.query(User).filter(User.azure_id == azure_id).first()
+            if user:
+                # Make a copy of important attributes before the session closes
+                user._id = user.id
+                user._is_admin = user.is_admin
+                user._display_name = user.display_name
+                user._email = user.email
+                # Detach the user from session but keep state
+                session.expunge(user)
+            return user
 
     def get_user_by_id(self, user_id):
         """Get a user by their ID."""
         with self.session_scope() as session:
-            return session.query(User).filter(User.id == user_id).first()
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                # Cache important attributes before session closes
+                user._id = user.id
+                user._is_admin = user.is_admin
+                user._display_name = user.display_name
+                user._email = user.email
+                # Detach the user from session but keep state
+                session.expunge(user)
+            return user
 
     def create_user(self, azure_id, email, display_name):
         """Create a new user."""
@@ -72,19 +85,33 @@ class DatabaseManager:
             user = User(azure_id=azure_id, email=email, display_name=display_name)
             session.add(user)
             session.commit()
+            # Cache important properties before detaching
+            user._id = user.id
+            user._is_admin = user.is_admin
+            user._display_name = user.display_name
+            user._email = user.email
+            # Detach from session
+            session.expunge(user)
             return user
 
     def get_competencies(self):
         """Get all competencies."""
         with self.session_scope() as session:
-            return session.query(Competency).all()
+            competencies = session.query(Competency).all()
+            # Detach all objects from the session
+            for comp in competencies:
+                session.expunge(comp)
+            return competencies
 
     def get_competency_by_id(self, competency_id):
         """Get a competency by its ID."""
         with self.session_scope() as session:
-            return (
+            competency = (
                 session.query(Competency).filter(Competency.id == competency_id).first()
             )
+            if competency:
+                session.expunge(competency)
+            return competency
 
     def create_competency(self, name, description, category=None, level=None):
         """Create a new competency."""
@@ -94,6 +121,7 @@ class DatabaseManager:
             )
             session.add(competency)
             session.commit()
+            session.expunge(competency)
             return competency
 
     def update_competency(
@@ -118,6 +146,7 @@ class DatabaseManager:
 
             competency.updated_at = datetime.utcnow()
             session.commit()
+            session.expunge(competency)
             return competency
 
     def delete_competency(self, competency_id):
@@ -146,12 +175,21 @@ class DatabaseManager:
     def get_star_stories_by_user(self, user_id):
         """Get all STAR stories for a user."""
         with self.session_scope() as session:
-            return session.query(STARStory).filter(STARStory.user_id == user_id).all()
+            stories = (
+                session.query(STARStory).filter(STARStory.user_id == user_id).all()
+            )
+            # Detach all stories from the session
+            for story in stories:
+                session.expunge(story)
+            return stories
 
     def get_star_story_by_id(self, story_id):
         """Get a STAR story by its ID."""
         with self.session_scope() as session:
-            return session.query(STARStory).filter(STARStory.id == story_id).first()
+            story = session.query(STARStory).filter(STARStory.id == story_id).first()
+            if story:
+                session.expunge(story)
+            return story
 
     def create_star_story(
         self,
@@ -176,6 +214,7 @@ class DatabaseManager:
             )
             session.add(story)
             session.commit()
+            session.expunge(story)
             return story
 
     def update_star_story(
@@ -212,6 +251,7 @@ class DatabaseManager:
 
             story.updated_at = datetime.utcnow()
             session.commit()
+            session.expunge(story)
             return story
 
     def delete_star_story(self, story_id):
@@ -228,13 +268,16 @@ class DatabaseManager:
     def get_recent_star_stories_by_user(self, user_id, limit=3):
         """Get recent STAR stories for a user."""
         with self.session_scope() as session:
-            return (
+            stories = (
                 session.query(STARStory)
                 .filter(STARStory.user_id == user_id)
                 .order_by(STARStory.updated_at.desc())
                 .limit(limit)
                 .all()
             )
+            for story in stories:
+                session.expunge(story)
+            return stories
 
     def create_case_study(self, user_id, title, description=None, image_path=None):
         """Create a new case study."""
@@ -247,17 +290,28 @@ class DatabaseManager:
             )
             session.add(case_study)
             session.commit()
+            session.expunge(case_study)
             return case_study
 
     def get_case_study_by_id(self, case_id):
         """Get a case study by its ID."""
         with self.session_scope() as session:
-            return session.query(CaseStudy).filter(CaseStudy.id == case_id).first()
+            case_study = (
+                session.query(CaseStudy).filter(CaseStudy.id == case_id).first()
+            )
+            if case_study:
+                session.expunge(case_study)
+            return case_study
 
     def get_case_studies_by_user(self, user_id):
         """Get all case studies for a user."""
         with self.session_scope() as session:
-            return session.query(CaseStudy).filter(CaseStudy.user_id == user_id).all()
+            case_studies = (
+                session.query(CaseStudy).filter(CaseStudy.user_id == user_id).all()
+            )
+            for study in case_studies:
+                session.expunge(study)
+            return case_studies
 
     def update_case_study(
         self,
@@ -286,6 +340,7 @@ class DatabaseManager:
 
             case_study.updated_at = datetime.utcnow()
             session.commit()
+            session.expunge(case_study)
             return case_study
 
     def delete_case_study(self, case_id):
@@ -320,7 +375,10 @@ class DatabaseManager:
             query = session.query(AuditLog).filter(AuditLog.user_id == user_id)
             if action_type:
                 query = query.filter(AuditLog.action == action_type)
-            return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+            logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+            for log in logs:
+                session.expunge(log)
+            return logs
 
     def count_star_stories_by_user(self, user_id):
         """Count STAR stories for a user."""
@@ -335,7 +393,12 @@ class DatabaseManager:
     def get_all_users(self):
         """Get all users."""
         with self.session_scope() as session:
-            return session.query(User).order_by(User.display_name).all()
+            users = session.query(User).order_by(User.display_name).all()
+            for user in users:
+                user._id = user.id
+                user._is_admin = user.is_admin
+                session.expunge(user)
+            return users
 
     def toggle_admin_role(self, user_id):
         """Toggle admin role for a user."""
@@ -351,103 +414,73 @@ class DatabaseManager:
     def get_audit_logs_by_user(self, user_id):
         """Get all audit logs for a user."""
         with self.session_scope() as session:
-            return (
+            logs = (
                 session.query(AuditLog)
                 .filter(AuditLog.user_id == user_id)
                 .order_by(AuditLog.created_at.desc())
                 .all()
             )
+            for log in logs:
+                session.expunge(log)
+            return logs
 
-    # def count_star_stories_by_user(self, user_id):
-    #     """Count STAR stories for a user."""
-    #     with self.session_scope() as session:
-    #         return session.query(STARStory).filter(STARStory.user_id == user_id).count()
+    def count_users(self):
+        """Count total number of users."""
+        with self.session_scope() as session:
+            return session.query(User).count()
 
-    # def count_case_studies_by_user(self, user_id):
-    #     """Count case studies for a user."""
-    #     with self.session_scope() as session:
-    #         return session.query(CaseStudy).filter(CaseStudy.user_id == user_id).count()
-
-    # def get_all_users(self):
-    #     """Get all users."""
-    #     with self.session_scope() as session:
-    #         return session.query(User).order_by(User.display_name).all()
-
-    # def toggle_admin_role(self, user_id):
-    #     """Toggle admin role for a user."""
-    #     with self.session_scope() as session:
-    #         user = session.query(User).filter(User.id == user_id).first()
-    #         if not user:
-    #             return False
-
-    #         user.is_admin = not user.is_admin
-    #         session.commit()
-    #         return True
-
-    # def get_audit_logs_by_user(self, user_id):
-    #     """Get all audit logs for a user."""
-    #     with self.session_scope() as session:
-    #         return (
-    #             session.query(AuditLog)
-    #             .filter(AuditLog.user_id == user_id)
-    #             .order_by(AuditLog.created_at.desc())
-    #             .all()
-    #         )
-
-
-def count_users(self):
-    """Count total number of users."""
-    with self.session_scope() as session:
-        return session.query(User).count()
-
-
-def create_user(self, azure_id, email, display_name, is_admin=False):
-    """Create a new user."""
-    with self.session_scope() as session:
-        user = User(
-            azure_id=azure_id,
-            email=email,
-            display_name=display_name,
-            is_admin=is_admin,
-            is_active=True,
-        )
-        session.add(user)
-        session.commit()
-
-        # We can't log the audit here yet since the user ID isn't generated until after commit
-        # The calling function should handle the audit logging
-
-        return user
-
-
-def update_user_if_changed(self, user_id, email=None, display_name=None):
-    """Update user information if it has changed."""
-    with self.session_scope() as session:
-        user = session.query(User).filter(User.id == user_id).first()
-        if not user:
-            return None
-
-        changes = False
-
-        if email is not None and user.email != email:
-            user.email = email
-            changes = True
-
-        if display_name is not None and user.display_name != display_name:
-            user.display_name = display_name
-            changes = True
-
-        if changes:
-            user.updated_at = datetime.utcnow()
-            session.commit()
-
-            # Log the update
-            self.log_audit(
-                user_id=user_id,
-                action="user_updated",
-                entity_type="user",
-                entity_id=user_id,
-                details="User information updated from Azure AD",
+    def create_user(self, azure_id, email, display_name, is_admin=False):
+        """Create a new user."""
+        with self.session_scope() as session:
+            user = User(
+                azure_id=azure_id,
+                email=email,
+                display_name=display_name,
+                is_admin=is_admin,
+                is_active=True,
             )
+            session.add(user)
+            session.commit()
+            # Cache important properties
+            user._id = user.id
+            user._is_admin = user.is_admin
+            session.expunge(user)
+            return user
 
-        return user
+    def update_user_if_changed(self, user_id, email=None, display_name=None):
+        """Update user information if it has changed."""
+        with self.session_scope() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if not user:
+                return None
+
+            changes = False
+
+            if email is not None and user.email != email:
+                user.email = email
+                changes = True
+
+            if display_name is not None and user.display_name != display_name:
+                user.display_name = display_name
+                changes = True
+
+            if changes:
+                user.updated_at = datetime.utcnow()
+                session.commit()
+
+                # Log the update
+                self.log_audit(
+                    user_id=user_id,
+                    action="user_updated",
+                    entity_type="user",
+                    entity_id=user_id,
+                    details="User information updated from Azure AD",
+                )
+
+            # Cache important attributes
+            user._id = user.id
+            user._is_admin = user.is_admin
+            user._display_name = user.display_name
+            user._email = user.email
+            session.expunge(user)
+            return user

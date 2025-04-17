@@ -15,6 +15,7 @@ from flask import (
     url_for,
 )
 
+# Define favicon path BEFORE initializing the app
 FAVICON_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),  # Path to `web/` directory
     "static",
@@ -81,6 +82,20 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
 
+
+# Add custom unauthorized handler for the login manager
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    if request.path == "/favicon.ico":
+        try:
+            return send_file(FAVICON_PATH, mimetype="image/vnd.microsoft.icon")
+        except Exception as e:
+            logger.error(f"Error serving favicon: {str(e)}")
+            return "", 204
+    flash("Please log in to access this page.", "warning")
+    return redirect(url_for("auth.login", next=request.url))
+
+
 # Initialize prompt agent
 prompt_agent = PromptAgent(db_manager=db_manager)
 
@@ -96,6 +111,17 @@ app.register_blueprint(gap_analysis_bp, url_prefix="/gap-analysis")
 def load_user(user_id):
     """Load user from database for Flask-Login."""
     return db_manager.get_user_by_id(user_id)
+
+
+# Define favicon route BEFORE the index route
+@app.route("/favicon.ico")
+def favicon():
+    """Serve the favicon without requiring authentication."""
+    try:
+        return send_file(FAVICON_PATH, mimetype="image/vnd.microsoft.icon")
+    except Exception as e:
+        logger.error(f"Error serving favicon: {str(e)}")
+        return "", 204
 
 
 @app.route("/")
@@ -127,32 +153,32 @@ def dashboard():
     )
 
 
-@app.route("/favicon.ico")
-def favicon():
-    # Serve the favicon with hardcoded path
-    return send_file(FAVICON_PATH, mimetype="image/vnd.microsoft.icon")
-
-
 @app.route("/api/health")
 def health_check():
     """API health check endpoint."""
     return jsonify({"status": "ok", "version": settings.APP_VERSION})
 
 
-# star_competency_app/interfaces/web/app.py
-# Add or update these error handlers in your app
+# Modify the 401 error handler to check for favicon
+@app.errorhandler(401)
+def unauthorized(e):
+    """Handle 401 errors."""
+    if request.path == "/favicon.ico":
+        try:
+            return send_file(FAVICON_PATH, mimetype="image/vnd.microsoft.icon")
+        except Exception as e:
+            logger.error(f"Error serving favicon: {str(e)}")
+            return "", 204
+
+    logger.error(f"401 error: {request.path} - {e}")
+    return render_template("errors/401.html"), 401
+
+
 @app.errorhandler(400)
 def bad_request(e):
     """Handle 400 errors."""
     logger.error(f"400 error: {request.path} - {e}")
     return render_template("errors/400.html"), 400
-
-
-@app.errorhandler(401)
-def unauthorized(e):
-    """Handle 401 errors."""
-    logger.error(f"401 error: {request.path} - {e}")
-    return render_template("errors/401.html"), 401
 
 
 @app.errorhandler(403)

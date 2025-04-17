@@ -1,7 +1,7 @@
 # star_competency_app/auth/azure_sso.py
 import logging
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 import msal
 import requests
@@ -174,10 +174,7 @@ class AzureSSO:
                 if changes:
                     user.updated_at = datetime.utcnow()
 
-            # Commit changes
-            db_session.commit()
-
-            # Create a dictionary with user data that's safe to use outside the session
+            # Extract user data BEFORE detaching from session
             user_data = {
                 "id": user.id,
                 "azure_id": user.azure_id,
@@ -186,11 +183,14 @@ class AzureSSO:
                 "is_admin": user.is_admin,
             }
 
+            # Commit changes
+            db_session.commit()
+
         # Store user data in Flask session (outside the db session)
         session["user"] = user_data
         session["access_token"] = token_result["access_token"]
 
-        # Log the successful login
+        # Log the successful login - using the extracted user_data
         self.db_manager.log_audit(
             user_id=user_data["id"],
             action="login",
@@ -200,6 +200,17 @@ class AzureSSO:
         )
 
         return True, user_info, None
+
+    def handle_auth_callback(self) -> Optional[User]:
+        """Handle the authentication callback and return a properly detached User object."""
+        success, user_info, error = self.process_login(request.args)
+
+        if not success:
+            return None
+
+        # We need to get a proper User object for Flask-Login
+        user = self.db_manager.get_user_by_id(session["user"]["id"])
+        return user
 
     def logout(self):
         """Log out the user and clear session."""

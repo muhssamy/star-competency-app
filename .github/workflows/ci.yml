@@ -1,0 +1,96 @@
+name: CI / Compose Build & Publish
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/${{ github.repository }}
+
+jobs:
+  lint-test:
+    name: 🐍 Lint & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache Poetry & pip
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Configure Poetry
+        run: poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run flake8
+        run: poetry run flake8 .
+
+      - name: Run pytest
+        run: poetry run pytest --maxfail=1 --disable-warnings -q
+
+  compose-build:
+    name: 🐳 Build & Publish via Docker Compose
+    runs-on: ubuntu-latest
+    needs: lint-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ensure Docker Compose available
+        run: |
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" \
+              -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          docker-compose version
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build services using Compose
+        run: |
+          docker-compose -f ./docker/docker-compose.yml build
+
+      - name: Tag and push versioned image and :latest
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION_TAG=${GITHUB_REF#refs/tags/}
+          IMAGE_NAME=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.repository }}
+          # Tag with version (e.g., ghcr.io/your-user/repo-name:v1.0.0)
+          docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${VERSION_TAG}
+          # Tag with :latest (e.g., ghcr.io/your-user/repo-name:latest)
+          docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:latest
+          # Push both tags
+          docker-compose -f ./docker/docker-compose.yml push

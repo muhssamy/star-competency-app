@@ -12,6 +12,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy.orm.session import object_session
 
 from star_competency_app.auth.azure_sso import AzureSSO
 from star_competency_app.database.db_manager import DatabaseManager
@@ -44,24 +45,31 @@ def login():
 @auth_bp.route("/callback")
 def callback():
     """Handle Azure SSO callback."""
-    # Process the login callback
     success, user_info, error = azure_sso.process_login(request.args)
 
     if not success:
         flash(f"Login failed: {error}", "error")
         return redirect(url_for("auth.login"))
 
-    # Get user from database
-    user = db_manager.get_user_by_azure_id(user_info["id"])
+    # Get user and active session from db_manager
+    user, db_session = db_manager.get_user_by_azure_id(user_info["id"])
 
     if not user:
+        db_session.close()
         flash("User account not found", "error")
         return redirect(url_for("auth.login"))
+
+    # User is already attached to db_session, but double-check
+    if object_session(user) is None:
+        user = db_session.merge(user)
 
     # Log in the user
     login_user(user)
 
-    # Redirect to next page or dashboard
+    # Clean up session
+    db_session.close()
+
+    # Redirect user
     next_page = session.get("next", None)
     if next_page and is_safe_url(next_page):
         return redirect(next_page)

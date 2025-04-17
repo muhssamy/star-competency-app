@@ -50,10 +50,16 @@ class DatabaseManager:
         finally:
             session.close()
 
-    def get_user_by_azure_id(self, azure_id):
+    # def get_user_by_azure_id(self, azure_id):
+    #     """Get a user by their Azure ID."""
+    #     with self.session_scope() as session:
+    #         return session.query(User).filter(User.azure_id == azure_id).first() #claude version
+
+    def get_user_by_azure_id(self, azure_id: str):
         """Get a user by their Azure ID."""
-        with self.session_scope() as session:
-            return session.query(User).filter(User.azure_id == azure_id).first()
+        session = self.session_factory()
+        user = session.query(User).filter(User.azure_id == azure_id).first()
+        return user, session
 
     def get_user_by_id(self, user_id):
         """Get a user by their ID."""

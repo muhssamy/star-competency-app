@@ -38,16 +38,32 @@ def security_before_request():
     # Add request ID for tracing
     g.request_id = str(uuid.uuid4())
 
-    # Check session expiry
-    if "user" in session:
-        if "last_activity" in session:
-            # Session timeout after 30 minutes of inactivity
-            if time.time() - session["last_activity"] > 1800:  # 30 minutes
-                session.clear()
-                return abort(401)  # Unauthorized - session expired
+    # Define public routes that don't require authentication
+    public_endpoints = [
+        "auth.login",  # Login page
+        "auth.callback",  # Azure SSO callback
+        "static",  # Static assets
+        "auth.logout",  # Logout should be accessible if session expires
+        "index",  # Root route (/)
+    ]
 
-        # Update last activity
-        session["last_activity"] = time.time()
+    # Check if current route is a public endpoint
+    if request.endpoint in public_endpoints:
+        return  # Allow access to public routes without session checks
+
+    # Check if user is authenticated
+    if "user" not in session:
+        return abort(401)  # Unauthorized - not logged in
+
+    # Check session expiry
+    if "last_activity" in session:
+        # Session timeout after 30 minutes of inactivity
+        if time.time() - session["last_activity"] > 1800:  # 30 minutes
+            session.clear()
+            return abort(401)  # Unauthorized - session expired
+
+    # Update last activity
+    session["last_activity"] = time.time()
 
 
 def init_security(app):

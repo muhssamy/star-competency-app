@@ -1,0 +1,55 @@
+# The error shows this template is missing:
+# jinja2.exceptions.TemplateNotFound: star/edit.html
+
+# You need to create this file at:
+# /app/templates/star/edit.html
+
+# Create this file with the following content:
+
+{% extends "base.html" %}
+
+{% block title %}Edit STAR Story{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Edit STAR Story</h1>
+    <form method="POST" action="{{ url_for('star.edit_star_story', story_id=story.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ story.title }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="competency" class="form-label">Competency</label>
+            <select class="form-select" id="competency" name="competency_id">
+                <option value="">Select a competency</option>
+                {% for comp in competencies %}
+                <option value="{{ comp.id }}" {% if story.competency_id == comp.id %}selected{% endif %}>
+                    {{ comp.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="situation" class="form-label">Situation</label>
+            <textarea class="form-control" id="situation" name="situation" rows="3">{{ story.situation }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="task" class="form-label">Task</label>
+            <textarea class="form-control" id="task" name="task" rows="3">{{ story.task }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="action" class="form-label">Action</label>
+            <textarea class="form-control" id="action" name="action" rows="3">{{ story.action }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="result" class="form-label">Result</label>
+            <textarea class="form-control" id="result" name="result" rows="3">{{ story.result }}</textarea>
+        </div>
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('star.view_star_story', story_id=story.id) }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -38,11 +38,8 @@ class User(UserMixin, Base):
     def __repr__(self):
         return f"<User {self.display_name}>"
 
-    # Flask-Login integration with safe detached instance handling
     def get_id(self):
-        """Return user ID as string, safely handling detached instances."""
-        if hasattr(self, "_id"):
-            return str(self._id)
+        """Return the user's ID as a string."""
         return str(self.id)
 
     @property
@@ -55,24 +52,38 @@ class User(UserMixin, Base):
 
     @property
     def is_admin_safe(self):
-        """Safe accessor for is_admin that works with detached objects."""
-        if hasattr(self, "_is_admin"):
-            return self._is_admin
-        return getattr(self, "is_admin", False)
+        """
+        Safely access is_admin attribute, handling detached instances.
+
+        This method provides a way to access is_admin that works even
+        when the instance is detached from a SQLAlchemy session.
+        """
+        try:
+            # First, try to access the attribute normally
+            return self.is_admin
+        except Exception:
+            # If that fails, return a default value
+            return False
 
     @property
     def display_name_safe(self):
-        """Safe accessor for display_name that works with detached objects."""
-        if hasattr(self, "_display_name"):
-            return self._display_name
-        return getattr(self, "display_name", "")
+        """
+        Safely access display_name attribute, handling detached instances.
+        """
+        try:
+            return self.display_name
+        except Exception:
+            return ""
 
     @property
     def email_safe(self):
-        """Safe accessor for email that works with detached objects."""
-        if hasattr(self, "_email"):
-            return self._email
-        return getattr(self, "email", "")
+        """
+        Safely access email attribute, handling detached instances.
+        """
+        try:
+            return self.email
+        except Exception:
+            return ""
 
 
 class Competency(Base):

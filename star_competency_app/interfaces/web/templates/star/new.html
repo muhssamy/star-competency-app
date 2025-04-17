@@ -1,13 +1,17 @@
-<!-- star_competency_app/interfaces/web/templates/star/new.html -->
 {% extends "base.html" %}
 
-{% block title %}New STAR Story - STAR Competency App{% endblock %}
+{% block title %}New Story - STAR Competency App{% endblock %}
+
+{% block head_meta %}
+{{ super() }}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h1>Create New STAR Story</h1>
-        <p class="lead">Create a structured story using the Situation, Task, Action, Result method.</p>
+        <h1>Create New Story</h1>
+        <p class="lead">Share your experience and let our AI enhance it with the STAR method.</p>
     </div>
     <div class="col-auto">
         <a href="{{ url_for('star.list_star_stories') }}" class="btn btn-outline-secondary">
@@ -16,20 +20,19 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-body">
         <form action="{{ url_for('star.new_star_story') }}" method="POST">
-            <!-- Add CSRF token if using Flask-WTF -->
             {% if csrf_token %}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             {% endif %}
-            
+
             <div class="mb-3">
                 <label for="title" class="form-label">Title</label>
                 <input type="text" class="form-control" id="title" name="title" required>
-                <div class="form-text">Give your STAR story a descriptive title.</div>
+                <div class="form-text">Give your story a descriptive title.</div>
             </div>
-            
+
             <div class="mb-3">
                 <label for="competency_id" class="form-label">Competency</label>
                 <select class="form-select" id="competency_id" name="competency_id">
@@ -40,75 +43,95 @@
                     </option>
                     {% endfor %}
                 </select>
-                <div class="form-text">Select the competency this STAR story demonstrates.</div>
+                <div class="form-text">Select the competency this story demonstrates.</div>
             </div>
-            
+
             <div class="mb-4">
-                <div class="card mb-3 star-component star-situation">
+                <div class="card border-0 bg-light">
                     <div class="card-body">
-                        <h5 class="card-title">Situation</h5>
-                        <p class="card-text text-muted">Describe the context and background. What was happening?</p>
-                        <textarea class="form-control" id="situation" name="situation" rows="4"></textarea>
-                    </div>
-                </div>
-                
-                <div class="card mb-3 star-component star-task">
-                    <div class="card-body">
-                        <h5 class="card-title">Task</h5>
-                        <p class="card-text text-muted">What were you specifically required to do? What was your responsibility?</p>
-                        <textarea class="form-control" id="task" name="task" rows="4"></textarea>
-                    </div>
-                </div>
-                
-                <div class="card mb-3 star-component star-action">
-                    <div class="card-body">
-                        <h5 class="card-title">Action</h5>
-                        <p class="card-text text-muted">What did you actually do? How did you do it? Focus on YOUR actions.</p>
-                        <textarea class="form-control" id="action" name="action" rows="4"></textarea>
-                    </div>
-                </div>
-                
-                <div class="card mb-3 star-component star-result">
-                    <div class="card-body">
-                        <h5 class="card-title">Result</h5>
-                        <p class="card-text text-muted">What was the outcome? How did you measure success? What did you learn?</p>
-                        <textarea class="form-control" id="result" name="result" rows="4"></textarea>
+                        <h5 class="card-title">Your Story</h5>
+                        <p class="card-text text-muted">Share your experience in your own words. Our AI will help structure it using the STAR method (Situation, Task, Action, Result).</p>
+                        <textarea class="form-control" id="story_content" name="story_content" rows="12" placeholder="Describe your experience here..."></textarea>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Hidden fields for STAR components (will be filled by AI) -->
+            <input type="hidden" id="situation" name="situation" value="">
+            <input type="hidden" id="task" name="task" value="">
+            <input type="hidden" id="action" name="action" value="">
+            <input type="hidden" id="result" name="result" value="">
+
+            <div id="generatedStarContainer" class="mb-4 d-none">
+                <h5 class="mb-3">Generated STAR Structure</h5>
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-light">Situation</div>
+                    <div class="card-body">
+                        <p id="situationPreview" class="mb-0">-</p>
+                    </div>
+                </div>
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-light">Task</div>
+                    <div class="card-body">
+                        <p id="taskPreview" class="mb-0">-</p>
+                    </div>
+                </div>
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-light">Action</div>
+                    <div class="card-body">
+                        <p id="actionPreview" class="mb-0">-</p>
+                    </div>
+                </div>
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-light">Result</div>
+                    <div class="card-body">
+                        <p id="resultPreview" class="mb-0">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="aiLoading" class="mb-4 d-none">
+                <div class="d-flex align-items-center justify-content-center p-4">
+                    <div class="spinner-border text-primary me-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mb-0">AI is generating your STAR structure...</p>
+                </div>
+            </div>
+
             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                 <button type="reset" class="btn btn-outline-secondary">Reset</button>
-                <button type="submit" class="btn btn-primary">Create STAR Story</button>
+                <button type="button" id="generateBtn" class="btn btn-success">
+                    <i class="bi bi-magic"></i> Generate with AI
+                </button>
+                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>Save Story</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Competency Details Section -->
-<div class="card mt-4">
-    <div class="card-header">
+<div class="card mt-4 shadow-sm">
+    <div class="card-header bg-white">
         <h5 class="mb-0">Competency Guidance</h5>
     </div>
     <div class="card-body">
         <p>Select a competency above to see guidance on what behaviors demonstrate this competency.</p>
-        
         <div id="competencyDetails" class="d-none">
             <h5 id="selectedCompName"></h5>
             <p id="selectedCompDesc"></p>
-            
             <div class="row mt-3">
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-header">Meets Expectations</div>
+                    <div class="card bg-light border-0">
+                        <div class="card-header bg-light">Meets Expectations</div>
                         <div class="card-body">
                             <ul id="selectedCompMeets"></ul>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-header">Exceeds Expectations</div>
+                    <div class="card bg-light border-0">
+                        <div class="card-header bg-light">Exceeds Expectations</div>
                         <div class="card-body">
                             <ul id="selectedCompExceeds"></ul>
                         </div>
@@ -123,84 +146,82 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM elements
-    var competencySelect = document.getElementById('competency_id');
-    var detailsSection = document.getElementById('competencyDetails');
-    var nameElement = document.getElementById('selectedCompName');
-    var descElement = document.getElementById('selectedCompDesc');
-    var meetsList = document.getElementById('selectedCompMeets');
-    var exceedsList = document.getElementById('selectedCompExceeds');
-    
-    // Only proceed if all elements exist
-    if (competencySelect && detailsSection && nameElement && descElement && meetsList && exceedsList) {
-        // Set up competency select change handler
+    // URLs
+    const generateUrl = "{{ url_for('star.generate_star_structure') }}";
+    const detailsBase = '/competency/';
+
+    // Elements
+    const competencySelect = document.getElementById('competency_id');
+    const detailsSection = document.getElementById('competencyDetails');
+    const nameElement = document.getElementById('selectedCompName');
+    const descElement = document.getElementById('selectedCompDesc');
+    const meetsList = document.getElementById('selectedCompMeets');
+    const exceedsList = document.getElementById('selectedCompExceeds');
+    const generateBtn = document.getElementById('generateBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const storyContent = document.getElementById('story_content');
+
+    // Competency change
+    if (competencySelect) {
         competencySelect.addEventListener('change', handleCompetencyChange);
-        
-        // Initial trigger if a value is preselected
-        if (competencySelect.value) {
-            handleCompetencyChange();
-        }
+        if (competencySelect.value) handleCompetencyChange();
     }
-    
-    // Handle competency selection change
+
     function handleCompetencyChange() {
-        var selectedId = competencySelect.value;
-        
-        if (selectedId) {
-            // Fetch competency details via AJAX
-            fetch('/competency/' + selectedId + '/details')
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(function(data) {
-                    // Update the UI with competency details
-                    updateCompetencyDetails(data);
-                })
-                .catch(function(error) {
-                    console.error('Error fetching competency details:', error);
-                    // Hide details on error
-                    detailsSection.classList.add('d-none');
+        const id = competencySelect.value;
+        if (!id) return detailsSection.classList.add('d-none');
+        fetch(`${detailsBase}${id}/details`)
+            .then(res => { if (!res.ok) throw new Error('Failed to fetch'); return res.json(); })
+            .then(data => {
+                nameElement.textContent = data.name;
+                descElement.textContent = data.description;
+                meetsList.innerHTML = '';
+                data.expectations.meets.forEach(item => {
+                    const li = document.createElement('li'); li.textContent = item;
+                    meetsList.appendChild(li);
                 });
-        } else {
-            // No competency selected, hide details
-            detailsSection.classList.add('d-none');
-        }
+                exceedsList.innerHTML = '';
+                data.expectations.exceeds.forEach(item => {
+                    const li = document.createElement('li'); li.textContent = item;
+                    exceedsList.appendChild(li);
+                });
+                detailsSection.classList.remove('d-none');
+            })
+            .catch(() => detailsSection.classList.add('d-none'));
     }
-    
-    // Update UI with competency details
-    function updateCompetencyDetails(competency) {
-        // Update name and description
-        nameElement.textContent = competency.name || '';
-        descElement.textContent = competency.description || '';
-        
-        // Clear existing lists
-        meetsList.innerHTML = '';
-        exceedsList.innerHTML = '';
-        
-        // Add meets expectations items
-        if (competency.expectations && competency.expectations.meets) {
-            competency.expectations.meets.forEach(function(item) {
-                var li = document.createElement('li');
-                li.textContent = item;
-                meetsList.appendChild(li);
-            });
-        }
-        
-        // Add exceeds expectations items
-        if (competency.expectations && competency.expectations.exceeds) {
-            competency.expectations.exceeds.forEach(function(item) {
-                var li = document.createElement('li');
-                li.textContent = item;
-                exceedsList.appendChild(li);
-            });
-        }
-        
-        // Show the details section
-        detailsSection.classList.remove('d-none');
-    }
+
+    // Generate with AI
+    generateBtn.addEventListener('click', function() {
+        if (!storyContent.value.trim()) { alert('Enter your story first.'); return; }
+        generateBtn.disabled = true;
+        document.getElementById('aiLoading').classList.remove('d-none');
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        fetch(generateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'X-CSRFToken':token },
+            credentials: 'same-origin',
+            body: JSON.stringify({ story_content: storyContent.value, competency_id: competencySelect.value || null })
+        })
+        .then(r => { if (!r.ok) throw r; return r.json(); })
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            document.getElementById('situation').value = data.situation;
+            document.getElementById('task').value = data.task;
+            document.getElementById('action').value = data.action;
+            document.getElementById('result').value = data.result;
+            document.getElementById('situationPreview').textContent = data.situation;
+            document.getElementById('taskPreview').textContent = data.task;
+            document.getElementById('actionPreview').textContent = data.action;
+            document.getElementById('resultPreview').textContent = data.result;
+            document.getElementById('generatedStarContainer').classList.remove('d-none');
+            submitBtn.disabled = false;
+        })
+        .catch(err => { console.error(err); alert('Error generating story.'); })
+        .finally(() => {
+            generateBtn.disabled = false;
+            document.getElementById('aiLoading').classList.add('d-none');
+        });
+    });
 });
 </script>
 {% endblock %}

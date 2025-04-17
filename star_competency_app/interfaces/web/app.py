@@ -14,6 +14,7 @@ from flask import (
     session,
     url_for,
 )
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 
 # Define favicon path BEFORE initializing the app
 FAVICON_PATH = os.path.join(
@@ -47,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 # Create Flask application
 app = Flask(__name__)
-
+csrf = CSRFProtect(app)
 # Initialize security features
 init_security(app)
 setup_security_logging(app)
@@ -83,6 +84,11 @@ login_manager.init_app(app)
 login_manager.login_view = "auth.login"
 
 
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf)
+
+
 # Add custom unauthorized handler for the login manager
 @login_manager.unauthorized_handler
 def unauthorized_callback():
@@ -109,8 +115,27 @@ app.register_blueprint(gap_analysis_bp, url_prefix="/gap-analysis")
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Load user from database for Flask-Login."""
-    return db_manager.get_user_by_id(user_id)
+    """
+    Load user from database for Flask-Login.
+
+    This method ensures that even if the user is detached from the session,
+    we can still retrieve and use the user object.
+    """
+    user = db_manager.get_user_by_id(int(user_id))
+
+    # If user is None, return None
+    if not user:
+        return None
+
+    # Ensure user is in a state that can be used
+    try:
+        # This will trigger any lazy loading
+        _ = user.is_admin
+    except Exception:
+        # If there's an issue, we'll just continue
+        pass
+
+    return user
 
 
 # Define favicon route BEFORE the index route

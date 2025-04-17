@@ -1,5 +1,6 @@
 # star_competency_app/ai/prompt_agent.py
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 from star_competency_app.ai.openai_client import OpenAIClient
@@ -19,7 +20,15 @@ class PromptAgent:
         openai_client: Optional[OpenAIClient] = None,
         db_manager: Optional[DatabaseManager] = None,
     ):
-        self.openai_client = openai_client or OpenAIClient()
+        # Use environment variable to get the API key
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+
+        # If no client is provided, create one with the API key from environment
+        self.openai_client = openai_client or OpenAIClient(api_key=api_key)
+
+        # Rest of the initialization remains the same
         self.db_manager = db_manager or DatabaseManager()
         self.context = {}
 
@@ -120,7 +129,7 @@ class PromptAgent:
 
             # Evaluate the story
             evaluation_result = self.openai_client.evaluate_star_story(
-                story=story_data, competency=competency
+                story_data=story_data, competency=competency
             )
 
             # Log this evaluation
@@ -153,20 +162,27 @@ class PromptAgent:
             user_id: User ID for personalization
 
         Returns:
-            Dict containing the generated story
+            Dict containing the generated story or an error message
         """
         try:
-            # Get competency
+            # Get competency details from the database
             competency = self.db_manager.get_competency_by_id(competency_id)
             if not competency:
+                logger.warning(f"Competency with ID {competency_id} not found.")
                 return {"error": "Competency not found"}
 
-            # Generate story
+            logger.info(
+                f"Generating STAR story for competency: {competency.name}, user_id={user_id}"
+            )
+
+            # Call the OpenAI client to generate the story
             story_result = self.openai_client.generate_star_story(
                 competency=competency, context=context
             )
 
-            # Log this generation
+            logger.debug(f"OpenAI story result: {story_result}")
+
+            # Log the generation in audit trail
             if user_id:
                 self.db_manager.log_audit(
                     user_id=user_id,
@@ -178,8 +194,8 @@ class PromptAgent:
             return story_result
 
         except Exception as e:
-            logger.error(f"Error generating STAR story: {e}")
-            return {"error": str(e)}
+            logger.exception("Failed to generate STAR story")
+            return {"error": f"OpenAI generation failed: {str(e)}"}
 
     def perform_gap_analysis(self, user_id: int) -> Dict[str, Any]:
         """

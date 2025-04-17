@@ -1,0 +1,90 @@
+<!-- star_competency_app/interfaces/web/templates/case_study/list.html -->
+{% extends "base.html" %}
+
+{% block title %}Case Studies - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Case Studies</h1>
+        <p class="lead">Upload and analyze case studies to identify competency alignment.</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('case_study.new_case_study') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Case Study
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if case_studies %}
+        <div class="row">
+            {% for case in case_studies %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    {% if case.image_path %}
+                    <div class="card-img-top p-3 text-center">
+                        <img src="{{ url_for('static', filename='uploads/' + case.image_path.split('/')[-1]) }}" 
+                             class="img-fluid case-study-thumbnail" alt="{{ case.title }}">
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ case.title }}</h5>
+                        <p class="card-text">
+                            {% if case.description %}
+                            {{ case.description|truncate(100) }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ case.updated_at.strftime('%Y-%m-%d') }}</small>
+                            <div class="btn-group">
+                                <a href="{{ url_for('case_study.view_case_study', case_id=case.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ case.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Delete Modal -->
+                <div class="modal fade" id="deleteModal{{ case.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirm Deletion</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete the case study: <strong>{{ case.title }}</strong>?</p>
+                                <p class="text-danger">This action cannot be undone.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <form action="{{ url_for('case_study.delete_case_study', case_id=case.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <p class="mb-3">You don't have any case studies yet.</p>
+            <a href="{{ url_for('case_study.new_case_study') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Upload Your First Case Study
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

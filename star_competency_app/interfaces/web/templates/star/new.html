@@ -1,0 +1,206 @@
+<!-- star_competency_app/interfaces/web/templates/star/new.html -->
+{% extends "base.html" %}
+
+{% block title %}New STAR Story - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Create New STAR Story</h1>
+        <p class="lead">Create a structured story using the Situation, Task, Action, Result method.</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('star.list_star_stories') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form action="{{ url_for('star.new_star_story') }}" method="POST">
+            <!-- Add CSRF token if using Flask-WTF -->
+            {% if csrf_token %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+                <div class="form-text">Give your STAR story a descriptive title.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="competency_id" class="form-label">Competency</label>
+                <select class="form-select" id="competency_id" name="competency_id">
+                    <option value="">-- Select a competency --</option>
+                    {% for competency in competencies %}
+                    <option value="{{ competency.id }}" {% if request.args.get('competency_id')|int == competency.id %}selected{% endif %}>
+                        {{ competency.name }} {% if competency.category %}({{ competency.category }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">Select the competency this STAR story demonstrates.</div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="card mb-3 star-component star-situation">
+                    <div class="card-body">
+                        <h5 class="card-title">Situation</h5>
+                        <p class="card-text text-muted">Describe the context and background. What was happening?</p>
+                        <textarea class="form-control" id="situation" name="situation" rows="4"></textarea>
+                    </div>
+                </div>
+                
+                <div class="card mb-3 star-component star-task">
+                    <div class="card-body">
+                        <h5 class="card-title">Task</h5>
+                        <p class="card-text text-muted">What were you specifically required to do? What was your responsibility?</p>
+                        <textarea class="form-control" id="task" name="task" rows="4"></textarea>
+                    </div>
+                </div>
+                
+                <div class="card mb-3 star-component star-action">
+                    <div class="card-body">
+                        <h5 class="card-title">Action</h5>
+                        <p class="card-text text-muted">What did you actually do? How did you do it? Focus on YOUR actions.</p>
+                        <textarea class="form-control" id="action" name="action" rows="4"></textarea>
+                    </div>
+                </div>
+                
+                <div class="card mb-3 star-component star-result">
+                    <div class="card-body">
+                        <h5 class="card-title">Result</h5>
+                        <p class="card-text text-muted">What was the outcome? How did you measure success? What did you learn?</p>
+                        <textarea class="form-control" id="result" name="result" rows="4"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="reset" class="btn btn-outline-secondary">Reset</button>
+                <button type="submit" class="btn btn-primary">Create STAR Story</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Competency Details Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Competency Guidance</h5>
+    </div>
+    <div class="card-body">
+        <p>Select a competency above to see guidance on what behaviors demonstrate this competency.</p>
+        
+        <div id="competencyDetails" class="d-none">
+            <h5 id="selectedCompName"></h5>
+            <p id="selectedCompDesc"></p>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-header">Meets Expectations</div>
+                        <div class="card-body">
+                            <ul id="selectedCompMeets"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-header">Exceeds Expectations</div>
+                        <div class="card-body">
+                            <ul id="selectedCompExceeds"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    var competencySelect = document.getElementById('competency_id');
+    var detailsSection = document.getElementById('competencyDetails');
+    var nameElement = document.getElementById('selectedCompName');
+    var descElement = document.getElementById('selectedCompDesc');
+    var meetsList = document.getElementById('selectedCompMeets');
+    var exceedsList = document.getElementById('selectedCompExceeds');
+    
+    // Only proceed if all elements exist
+    if (competencySelect && detailsSection && nameElement && descElement && meetsList && exceedsList) {
+        // Set up competency select change handler
+        competencySelect.addEventListener('change', handleCompetencyChange);
+        
+        // Initial trigger if a value is preselected
+        if (competencySelect.value) {
+            handleCompetencyChange();
+        }
+    }
+    
+    // Handle competency selection change
+    function handleCompetencyChange() {
+        var selectedId = competencySelect.value;
+        
+        if (selectedId) {
+            // Fetch competency details via AJAX
+            fetch('/competency/' + selectedId + '/details')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    // Update the UI with competency details
+                    updateCompetencyDetails(data);
+                })
+                .catch(function(error) {
+                    console.error('Error fetching competency details:', error);
+                    // Hide details on error
+                    detailsSection.classList.add('d-none');
+                });
+        } else {
+            // No competency selected, hide details
+            detailsSection.classList.add('d-none');
+        }
+    }
+    
+    // Update UI with competency details
+    function updateCompetencyDetails(competency) {
+        // Update name and description
+        nameElement.textContent = competency.name || '';
+        descElement.textContent = competency.description || '';
+        
+        // Clear existing lists
+        meetsList.innerHTML = '';
+        exceedsList.innerHTML = '';
+        
+        // Add meets expectations items
+        if (competency.expectations && competency.expectations.meets) {
+            competency.expectations.meets.forEach(function(item) {
+                var li = document.createElement('li');
+                li.textContent = item;
+                meetsList.appendChild(li);
+            });
+        }
+        
+        // Add exceeds expectations items
+        if (competency.expectations && competency.expectations.exceeds) {
+            competency.expectations.exceeds.forEach(function(item) {
+                var li = document.createElement('li');
+                li.textContent = item;
+                exceedsList.appendChild(li);
+            });
+        }
+        
+        // Show the details section
+        detailsSection.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

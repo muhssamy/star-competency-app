@@ -1,0 +1,62 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - app_data:/app/data
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/star_competency
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+  db:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../docker/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=star_competency
+    networks:
+      - app_network
+
+  backup:
+    build:
+      context: ..
+      dockerfile: docker/backup.Dockerfile
+    volumes:
+      - backups:/app/backups
+      - app_data:/app/data:ro
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=star_competency
+      - UPLOADS_DIR=/app/data/uploads
+    depends_on:
+      - db
+      - app
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  app_data:
+  backups:
+
+networks:
+  app_network:
+    driver: bridge

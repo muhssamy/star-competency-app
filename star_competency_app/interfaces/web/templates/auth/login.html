@@ -1,0 +1,26 @@
+<!-- star_competency_app/interfaces/web/templates/auth/login.html -->
+{% extends "base.html" %}
+
+{% block title %}Login - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">Login</h2>
+                    <p class="text-center mb-5">
+                        Login with your company Azure AD credentials to access the STAR Competency App.
+                    </p>
+                    <div class="d-grid">
+                        <a href="{{ auth_url }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-microsoft me-2"></i> Login with Microsoft
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

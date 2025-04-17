@@ -1,0 +1,290 @@
+<!-- star_competency_app/interfaces/web/templates/case_study/view.html (reviewed) -->
+{% extends "base.html" %}
+
+{% block title %}{{ case_study.title }} - Case Study - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>{{ case_study.title }}</h1>
+        <p class="lead">
+            <span class="text-muted">Last updated: {{ case_study.updated_at.strftime('%B %d, %Y') }}</span>
+        </p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+            <button type="button" class="btn btn-outline-success" onclick="analyzeCaseStudy({{ case_study.id }})">
+                <i class="bi bi-robot"></i> Analyze with AI
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Case Study Image</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if case_study.image_path %}
+                <img src="{{ url_for('static', filename='uploads/' + case_study.image_path.split('/')[-1]) }}" 
+                     class="img-fluid case-study-image" alt="{{ case_study.title }}">
+                {% else %}
+                <p>No image available</p>
+                {% endif %}
+                
+                {% if case_study.description %}
+                <div class="mt-3 text-start">
+                    <h6>Description:</h6>
+                    <p>{{ case_study.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Analysis Query</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="analysis-query" class="form-label">Query to analyze (optional)</label>
+                    <input type="text" class="form-control" id="analysis-query" 
+                           placeholder="Analyze this case study" value="Analyze this case study">
+                    <div class="form-text">You can customize your analysis request.</div>
+                </div>
+                <div class="d-grid">
+                    <button class="btn btn-primary" onclick="analyzeCaseStudy({{ case_study.id }})">
+                        <i class="bi bi-robot"></i> Run Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">AI Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div id="analysis-loading" class="d-none text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing case study...</p>
+                </div>
+                
+                <div id="analysis-container">
+                    {% if case_study.claude_analysis %}
+                    <div class="ai-feedback">{{ case_study.claude_analysis|safe }}</div>
+                    {% else %}
+                    <p class="text-center py-3">
+                        Click "Analyze with AI" to get an analysis of this case study.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Competencies</h5>
+            </div>
+            <div class="card-body">
+                <p>The following competencies are relevant to this case study:</p>
+                
+                <div class="mb-3">
+                    {% for competency in competencies %}
+                    <div class="form-check">
+                        <input class="form-check-input competency-checkbox" type="checkbox" 
+                               id="competency{{ competency.id }}" value="{{ competency.id }}">
+                        <label class="form-check-label" for="competency{{ competency.id }}">
+                            {{ competency.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-grid">
+                    <button class="btn btn-outline-primary" id="create-star-btn" disabled>
+                        <i class="bi bi-plus-circle"></i> Create STAR Story for Selected Competency
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the case study: <strong>{{ case_study.title }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('case_study.delete_case_study', case_id=case_study.id) }}" method="POST">
+                    <!-- Add CSRF token if using Flask-WTF -->
+                    {% if csrf_token %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add CSRF token for AJAX requests -->
+{% if csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle competency selection
+    const checkboxes = document.querySelectorAll('.competency-checkbox');
+    const createStarBtn = document.getElementById('create-star-btn');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Count checked checkboxes
+            const checkedCount = document.querySelectorAll('.competency-checkbox:checked').length;
+            
+            // Enable/disable button based on selection
+            if (checkedCount === 1) {
+                createStarBtn.disabled = false;
+            } else {
+                createStarBtn.disabled = true;
+            }
+        });
+    });
+    
+    // Create STAR story button click handler
+    if (createStarBtn) {
+        createStarBtn.addEventListener('click', function() {
+            const checkedBox = document.querySelector('.competency-checkbox:checked');
+            if (checkedBox) {
+                window.location.href = "{{ url_for('star.new_star_story') }}?competency_id=" + checkedBox.value;
+            }
+        });
+    }
+});
+
+// Function to analyze a case study
+function analyzeCaseStudy(caseId) {
+    if (!confirm('Would you like to analyze this case study using AI? This may take a moment.')) {
+        return;
+    }
+    
+    const queryInput = document.getElementById('analysis-query');
+    const query = queryInput ? queryInput.value : 'Analyze this case study';
+    
+    const analysisContainer = document.getElementById('analysis-container');
+    const loadingIndicator = document.getElementById('analysis-loading');
+    
+    if (!analysisContainer || !loadingIndicator) {
+        console.error('Required DOM elements not found');
+        alert('An error occurred. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Show loading indicator, hide analysis container
+    analysisContainer.classList.add('d-none');
+    loadingIndicator.classList.remove('d-none');
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('query', query);
+    
+    // Get CSRF token if available
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    const headers = {};
+    if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken.getAttribute('content');
+    }
+    
+    // Send AJAX request
+    fetch(`{{ url_for('case_study.analyze_case_study', case_id=case_study.id) }}`, {
+        method: 'POST',
+        body: formData,
+        headers: headers,
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Server returned ' + response.status + ' ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Hide loading indicator, show analysis container
+        loadingIndicator.classList.add('d-none');
+        analysisContainer.classList.remove('d-none');
+        
+        if (data.error) {
+            analysisContainer.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            return;
+        }
+        
+        let analysisHtml = `<div class="ai-feedback">${data.analysis}</div>`;
+        
+        // Add competency alignment if available
+        if (data.competency_alignment && Object.keys(data.competency_alignment).length > 0) {
+            analysisHtml += '<div class="mt-4"><h5>Competency Alignment:</h5><ul>';
+            for (const [competency, info] of Object.entries(data.competency_alignment)) {
+                const relevanceClass = info.relevant ? 'text-success' : 'text-muted';
+                analysisHtml += `<li class="${relevanceClass}"><strong>${competency}</strong> - Mentions: ${info.mentions}</li>`;
+            }
+            analysisHtml += '</ul></div>';
+            
+            // Auto-check competencies based on alignment
+            if (data.competency_alignment) {
+                checkRelevantCompetencies(data.competency_alignment);
+            }
+        }
+        
+        analysisContainer.innerHTML = analysisHtml;
+    })
+    .catch(error => {
+        // Hide loading indicator, show analysis container with error
+        loadingIndicator.classList.add('d-none');
+        analysisContainer.classList.remove('d-none');
+        analysisContainer.innerHTML = `<div class="alert alert-danger">An error occurred: ${error.message}</div>`;
+        console.error('Error:', error);
+    });
+}
+
+// Function to check relevant competencies based on AI analysis
+function checkRelevantCompetencies(alignment) {
+    const checkboxes = document.querySelectorAll('.competency-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        const competencyLabel = checkbox.nextElementSibling.textContent.trim();
+        
+        // Check if this competency is mentioned as relevant in the alignment
+        for (const [competency, info] of Object.entries(alignment)) {
+            if (competencyLabel.includes(competency) && info.relevant) {
+                checkbox.checked = true;
+                // Trigger change event to update button state
+                checkbox.dispatchEvent(new Event('change'));
+                break;
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

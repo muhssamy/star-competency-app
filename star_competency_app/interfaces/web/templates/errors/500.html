@@ -1,0 +1,23 @@
+<!-- star_competency_app/interfaces/web/templates/errors/500.html -->
+{% extends "base.html" %} {% block title %}Server Error - STAR Competency App{%
+endblock %} {% block content %}
+<div class="container text-center py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body py-5">
+          <h1 class="display-1 text-muted">500</h1>
+          <h2 class="mb-4">Server Error</h2>
+          <p class="lead mb-4">
+            Sorry, something went wrong on our end. The issue has been logged
+            and we're working to fix it.
+          </p>
+          <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="bi bi-house-fill"></i> Go to Homepage
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

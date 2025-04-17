@@ -1,0 +1,176 @@
+<!-- star_competency_app/interfaces/web/templates/star/view.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ story.title }} - STAR Story - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>{{ story.title }}</h1>
+        <p class="lead">
+            {% if story.competency %}
+            <span class="badge bg-primary">{{ story.competency.name }}</span>
+            {% endif %}
+            <span class="text-muted">Last updated: {{ story.updated_at.strftime('%B %d, %Y') }}</span>
+        </p>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('star.edit_star_story', story_id=story.id) }}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+            <button type="button" class="btn btn-outline-success" onclick="evaluateStarStory({{ story.id }})">
+                <i class="bi bi-robot"></i> Evaluate with AI
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4 star-component star-situation">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-geo-alt-fill"></i> Situation
+                </h5>
+                <p class="card-text">{{ story.situation or 'No situation provided' }}</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4 star-component star-task">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-check-circle-fill"></i> Task
+                </h5>
+                <p class="card-text">{{ story.task or 'No task provided' }}</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4 star-component star-action">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-lightning-fill"></i> Action
+                </h5>
+                <p class="card-text">{{ story.action or 'No action provided' }}</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4 star-component star-result">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-trophy-fill"></i> Result
+                </h5>
+                <p class="card-text">{{ story.result or 'No result provided' }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">AI Evaluation</h5>
+            </div>
+            <div class="card-body">
+                <div id="evaluation-loading" class="d-none text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing your STAR story...</p>
+                </div>
+                
+                <div id="evaluation-container">
+                    {% if story.ai_feedback %}
+                    <div class="ai-feedback">{{ story.ai_feedback|safe }}</div>
+                    {% else %}
+                    <p class="text-center py-3">
+                        Click "Evaluate with AI" to get feedback on your STAR story.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if story.competency %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Competency Alignment</h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ story.competency.name }}</h6>
+                <p>{{ story.competency.description }}</p>
+                
+                {% if story.competency.expectations %}
+                <div class="accordion mt-3" id="expectationsAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="meetsHeading">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#meetsCollapse">
+                                Meets Expectations
+                            </button>
+                        </h2>
+                        <div id="meetsCollapse" class="accordion-collapse collapse" 
+                             aria-labelledby="meetsHeading" data-bs-parent="#expectationsAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    {% for item in story.competency.expectations.meets %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="exceedsHeading">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#exceedsCollapse">
+                                Exceeds Expectations
+                            </button>
+                        </h2>
+                        <div id="exceedsCollapse" class="accordion-collapse collapse" 
+                             aria-labelledby="exceedsHeading" data-bs-parent="#expectationsAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    {% for item in story.competency.expectations.exceeds %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the STAR story: <strong>{{ story.title }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('star.delete_star_story', story_id=story.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add CSRF token for AJAX requests -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}

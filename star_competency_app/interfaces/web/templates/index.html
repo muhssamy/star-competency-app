@@ -1,0 +1,49 @@
+<!-- star_competency_app/interfaces/web/templates/index.html -->
+{% extends "base.html" %}
+
+{% block title %}Welcome to STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to STAR Competency App</h1>
+            <p class="lead mb-4">
+                Build, manage, and analyze your STAR stories aligned with your company's competency framework.
+            </p>
+            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4 gap-3">
+                    <i class="bi bi-box-arrow-in-right"></i> Login with Azure
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-star"></i> STAR Stories</h5>
+                    <p class="card-text">Create and manage your Situation, Task, Action, Result (STAR) stories aligned with competencies.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-clipboard-data"></i> Case Studies</h5>
+                    <p class="card-text">Upload and analyze case studies with AI assistance to identify competency alignment.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-graph-up"></i> AI Feedback</h5>
+                    <p class="card-text">Get intelligent feedback and suggestions to improve your STAR stories and case study analyses.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

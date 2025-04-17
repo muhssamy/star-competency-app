@@ -1,0 +1,72 @@
+<!-- star_competency_app/interfaces/web/templates/gap_analysis/no_stories.html -->
+{% extends "base.html" %}
+
+{% block title %}Gap Analysis - STAR Competency App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Competency Gap Analysis</h1>
+        <p class="lead">Analyze your STAR stories coverage against the competency framework.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+        <h3 class="mt-3">No STAR Stories Found</h3>
+        <p class="mb-4">
+            You need to create some STAR stories before performing a gap analysis. 
+            STAR stories help demonstrate your competencies through specific examples.
+        </p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Getting Started</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol class="text-start">
+                            <li>Create STAR stories that demonstrate your competencies</li>
+                            <li>Tag each story with the relevant competency</li>
+                            <li>Aim to cover different competencies in your framework</li>
+                            <li>Return to the Gap Analysis to see your progress</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="{{ url_for('star.new_star_story') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-plus-circle"></i> Create Your First STAR Story
+        </a>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Available Competencies</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for competency in competencies %}
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ competency.name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ competency.category }}</h6>
+                        <p class="card-text">{{ competency.description }}</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('star.new_star_story', competency_id=competency.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plus-circle"></i> Create Story
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

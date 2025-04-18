@@ -2,7 +2,7 @@
 
 // Variables with default values
 variable "REGISTRY" {
-  default = ""
+  default = "ghcr.io/muhssamy/star-competency"
 }
 
 variable "TAG" {
@@ -15,10 +15,10 @@ variable "DEBUG" {
 
 // App service
 target "app" {
-  context = ".."
-  dockerfile = "docker/Dockerfile"
+  context = "."
+  dockerfile = "Dockerfile"
   tags = [
-    "${REGISTRY}star-competency-app:${TAG}"
+    "${REGISTRY}-app:${TAG}"
   ]
   args = {
     DEBUG = "${DEBUG}"
@@ -27,10 +27,10 @@ target "app" {
 
 // Backup service
 target "backup" {
-  context = ".."
-  dockerfile = "docker/backup.Dockerfile"
+  context = "."
+  dockerfile = "backup.Dockerfile"
   tags = [
-    "${REGISTRY}star-competency-backup:${TAG}"
+    "${REGISTRY}-backup:${TAG}"
   ]
 }
 

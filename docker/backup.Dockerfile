@@ -1,5 +1,9 @@
 FROM alpine:3.16
 
+# No DEBUG argument needed for backup service
+# But we'll add it for consistency with Docker Bake
+ARG DEBUG=False
+
 RUN apk add --no-cache \
     postgresql-client \
     tar \

@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      args:
+        - DEBUG=False
+    restart: always
+    environment:
+      - DEBUG=False
+
+  db:
+    restart: always
+
+  backup:
+    restart: always

@@ -1,7 +1,13 @@
+# First stage: Define global build arguments
+FROM python:3.9-slim AS builder
+ARG DEBUG=False
+
+# Final stage: Build the actual image
 FROM python:3.9-slim
 
-# Define build arguments (must be after FROM)
-ARG DEBUG=False
+# Copy build arguments from builder stage
+ARG DEBUG
+ENV DEBUG=${DEBUG}
 
 # Set environment variables
 ENV PYTHONFAULTHANDLER=1 \
@@ -10,8 +16,7 @@ ENV PYTHONFAULTHANDLER=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
-    POETRY_VERSION=1.5.1 \
-    DEBUG=${DEBUG}
+    POETRY_VERSION=1.5.1
 
 # System dependencies
 RUN apt-get update \

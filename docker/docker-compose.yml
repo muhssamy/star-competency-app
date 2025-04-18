@@ -1,8 +1,11 @@
 services:
   app:
+    image: ${REGISTRY:-}star-competency-app:${TAG:-latest}
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        - DEBUG=${DEBUG:-False}
     ports:
       - "5000:5000"
     volumes:
@@ -24,7 +27,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../docker/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
@@ -33,6 +35,7 @@ services:
       - app_network
 
   backup:
+    image: ${REGISTRY:-}star-competency-backup:${TAG:-latest}
     build:
       context: ..
       dockerfile: docker/backup.Dockerfile

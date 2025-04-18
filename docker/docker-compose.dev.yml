@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      args:
+        - DEBUG=True
+    volumes:
+      - app_data:/app/data
+      - ..:/app:ro # Mount code for development
+    environment:
+      - DEBUG=True

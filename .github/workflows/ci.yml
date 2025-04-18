@@ -12,7 +12,6 @@ on:
 env:
   REGISTRY: ghcr.io
   REPOSITORY: ${{ github.repository }}
-  BAKE_FILE: docker/docker-bake.hcl
 
 jobs:
   lint-test:
@@ -36,11 +35,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Copy Dockerfiles to docker directory
-        run: |
-          cp Dockerfile docker/
-          cp docker/backup.Dockerfile docker/
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -66,45 +60,48 @@ jobs:
             echo "PR_TAG=${PR_TAG}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Copy necessary files for build context
-        run: |
-          # Create complete build context within docker directory
-          cp -r . docker/ || true
-          # Clean up any unnecessary/large folders
-          rm -rf docker/docker || true
-          rm -rf docker/.git || true
-          rm -rf docker/node_modules || true
-
-          echo "Build context prepared in docker directory"
-
-      - name: Build and push using Docker Bake (Push)
+      - name: Build and push using BuildKit CLI (Push)
         if: github.event_name != 'pull_request'
-        uses: docker/bake-action@v4
-        with:
-          workdir: docker
-          files: docker-bake.hcl
-          push: true
-          set: |
-            *.args.DEBUG=False
-            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.VERSION_TAG }}
-            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:latest
-            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.VERSION_TAG }}
-            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:latest
-          targets: |
-            app
-            backup
+        run: |
+          # Create a BuildKit-compatible build command that doesn't require parent directory access
+          cd docker
 
-      - name: Build and push using Docker Bake (PR)
+          echo "Building app image..."
+          docker buildx build \
+            --file Dockerfile \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.VERSION_TAG }} \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:latest \
+            --build-arg DEBUG=False \
+            --push \
+            .
+            
+          echo "Building backup image..."
+          docker buildx build \
+            --file backup.Dockerfile \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.VERSION_TAG }} \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:latest \
+            --build-arg DEBUG=False \
+            --push \
+            .
+
+      - name: Build and push using BuildKit CLI (PR)
         if: github.event_name == 'pull_request'
-        uses: docker/bake-action@v4
-        with:
-          workdir: docker
-          files: docker-bake.hcl
-          push: true
-          set: |
-            *.args.DEBUG=True
-            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.PR_TAG }}
-            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.PR_TAG }}
-          targets: |
-            app
-            backup
+        run: |
+          # Create a BuildKit-compatible build command that doesn't require parent directory access
+          cd docker
+
+          echo "Building app image for PR..."
+          docker buildx build \
+            --file Dockerfile \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.PR_TAG }} \
+            --build-arg DEBUG=True \
+            --push \
+            .
+            
+          echo "Building backup image for PR..."
+          docker buildx build \
+            --file backup.Dockerfile \
+            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.PR_TAG }} \
+            --build-arg DEBUG=True \
+            --push \
+            .

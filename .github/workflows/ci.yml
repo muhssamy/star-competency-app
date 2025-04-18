@@ -1,4 +1,4 @@
-name: CI / Docker Bake Build & Publish
+name: CI / Docker Build & Publish
 
 on:
   push:
@@ -21,8 +21,8 @@ jobs:
       - name: Skip Lint & Test
         run: echo "Lint & Test temporarily disabled to avoid Python 3.1 error."
 
-  bake-build-push:
-    name: 🐳 Build & Publish via Docker Bake
+  build-push:
+    name: 🐳 Build & Push Docker Images
     runs-on: ubuntu-latest
     needs: lint-test
     permissions:
@@ -60,48 +60,24 @@ jobs:
             echo "PR_TAG=${PR_TAG}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push using BuildKit CLI (Push)
-        if: github.event_name != 'pull_request'
-        run: |
-          # Create a BuildKit-compatible build command that doesn't require parent directory access
-          cd docker
+      - name: Build and push app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.VERSION_TAG || 'latest' }}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:latest
+          build-args: |
+            DEBUG=${{ github.event_name == 'pull_request' && 'True' || 'False' }}
 
-          echo "Building app image..."
-          docker buildx build \
-            --file Dockerfile \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.VERSION_TAG }} \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:latest \
-            --build-arg DEBUG=False \
-            --push \
-            .
-            
-          echo "Building backup image..."
-          docker buildx build \
-            --file backup.Dockerfile \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.VERSION_TAG }} \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:latest \
-            --build-arg DEBUG=False \
-            --push \
-            .
-
-      - name: Build and push using BuildKit CLI (PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          # Create a BuildKit-compatible build command that doesn't require parent directory access
-          cd docker
-
-          echo "Building app image for PR..."
-          docker buildx build \
-            --file Dockerfile \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.PR_TAG }} \
-            --build-arg DEBUG=True \
-            --push \
-            .
-            
-          echo "Building backup image for PR..."
-          docker buildx build \
-            --file backup.Dockerfile \
-            --tag ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.PR_TAG }} \
-            --build-arg DEBUG=True \
-            --push \
-            .
+      - name: Build and push backup image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/backup.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.VERSION_TAG || 'latest' }}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:latest

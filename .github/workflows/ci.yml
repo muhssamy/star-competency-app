@@ -64,20 +64,35 @@ jobs:
       - name: Build and push using Docker Bake (Push)
         if: github.event_name != 'pull_request'
         uses: docker/bake-action@v4
+        env:
+          BUILDX_BAKE_ENTITLEMENTS_FS: "1"
         with:
           files: ${{ env.BAKE_FILE }}
           push: true
           set: |
             *.args.DEBUG=False
-            *.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ steps.meta.outputs.VERSION_TAG }}
-            *.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}:latest
+            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.VERSION_TAG }}
+            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:latest
+            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.VERSION_TAG }}
+            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:latest
+          targets: |
+            app
+            backup
+          provenance: mode=max
 
       - name: Build and push using Docker Bake (PR)
         if: github.event_name == 'pull_request'
         uses: docker/bake-action@v4
+        env:
+          BUILDX_BAKE_ENTITLEMENTS_FS: "1"
         with:
           files: ${{ env.BAKE_FILE }}
           push: true
           set: |
             *.args.DEBUG=True
-            *.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ steps.meta.outputs.PR_TAG }}
+            app.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-app:${{ steps.meta.outputs.PR_TAG }}
+            backup.tags=${{ env.REGISTRY }}/${{ env.REPOSITORY }}-backup:${{ steps.meta.outputs.PR_TAG }}
+          targets: |
+            app
+            backup
+          provenance: mode=max

@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${REGISTRY:-}star-competency-app:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/muhssamy/star-competency}-app:${TAG:-latest}
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -35,7 +35,7 @@ services:
       - app_network
 
   backup:
-    image: ${REGISTRY:-}star-competency-backup:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/muhssamy/star-competency}-backup:${TAG:-latest}
     build:
       context: ..
       dockerfile: docker/backup.Dockerfile

@@ -1,3 +1,5 @@
+// docker/docker-bake.hcl
+
 // Variables with default values
 variable "REGISTRY" {
   default = ""
@@ -11,14 +13,9 @@ variable "DEBUG" {
   default = "False"
 }
 
-// Common build settings
-target "common" {
-  context = ".."
-}
-
 // App service
 target "app" {
-  inherits = ["common"]
+  context = ".."
   dockerfile = "docker/Dockerfile"
   tags = [
     "${REGISTRY}star-competency-app:${TAG}"
@@ -30,7 +27,7 @@ target "app" {
 
 // Backup service
 target "backup" {
-  inherits = ["common"]
+  context = ".."
   dockerfile = "docker/backup.Dockerfile"
   tags = [
     "${REGISTRY}star-competency-backup:${TAG}"
